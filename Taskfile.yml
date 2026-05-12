@@ -1,0 +1,19 @@
+version: '3'
+
+dotenv:
+  - .env
+
+interval: 500ms
+
+tasks:
+  build:
+    cmds:
+      - go install
+    sources:
+      - '**/*.go'
+    watch: true
+
+  example:
+    cmds:
+      - terraform plan
+    dir: examples/provider

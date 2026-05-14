@@ -1,0 +1,177 @@
+package provider
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-ketryx/pkg/ketryx"
+)
+
+// Ensure defined types fully satisfy interfaces
+var (
+	_ resource.Resource              = &projectResource{}
+	_ resource.ResourceWithConfigure = &projectResource{}
+)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// projectResource
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// projectResource is the resource implementation.
+type projectResource struct {
+	client *ketryx.Client
+}
+
+// NewOrderResource is a helper function to simplify the provider implementation.
+func NewProjectResource() resource.Resource {
+	return &projectResource{}
+}
+
+func (p *projectResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	var (
+		client *ketryx.Client
+		ok     bool
+	)
+
+	// Prevent panic if the provider has not been configured
+	if req.ProviderData == nil {
+		return
+	}
+
+	client, ok = req.ProviderData.(*ketryx.Client)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Soure Configure Type",
+			fmt.Sprintf("Expected *ketryx.Client, got: %T. Please report this issue to the provider developer", req.ProviderData),
+		)
+		return
+	}
+
+	p.client = client
+}
+
+func (p *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var (
+		diags      diag.Diagnostics
+		err        error
+		plan       projectResourceModel
+		project_id ketryx.KetryxAPIProjectsPostResponse
+		request    ketryx.KetryxAPIProjectsPostRequest
+	)
+
+	// Retrieve the plan
+	diags = req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Prepare the request
+	request.Name = plan.Name.String()
+	for _, repository := range plan.Repository {
+		request.Repositories = append(request.Repositories, ketryx.KetryxAPIRepository{
+			AuthToken:  repository.AuthToken.String(),
+			AuthUser:   repository.AuthUser.String(),
+			MainRef:    repository.MainRef.String(),
+			ReleaseRef: repository.ReleaseRef.String(),
+			Url:        repository.Url.String(),
+		})
+	}
+
+	// Create the project
+	project_id, err = p.client.ProjectsPost(ctx, request)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating project",
+			"Could not create project, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	// Update state
+	plan.Id = types.StringValue(project_id.Id)
+	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+func (p *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+}
+
+func (p *projectResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project"
+}
+
+func (p *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+}
+
+func (p *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed: true,
+			},
+			"name": schema.StringAttribute{
+				Required: true,
+			},
+			"repository": schema.SingleNestedAttribute{
+				Optional: true,
+				Attributes: map[string]schema.Attribute{
+					"auth_token": schema.StringAttribute{
+						Required: true,
+					},
+					"auth_user": schema.Float64Attribute{
+						Required: true,
+					},
+					"main_ref": schema.StringAttribute{
+						Required: true,
+					},
+					"release_ref": schema.StringAttribute{
+						Required: true,
+					},
+					"url": schema.StringAttribute{
+						Required: true,
+					},
+				},
+			},
+			"last_updated": schema.StringAttribute{
+				Computed: true,
+			},
+		},
+	}
+}
+
+func (p *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Models
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type projectResourceModel struct {
+	Id          types.String                     `tfsdk:"id"`
+	LastUpdated types.String                     `tfsdk:"last_updated"`
+	Name        types.String                     `tfsdk:"name"`
+	Repository  []projectRepositoryResourceModel `tfsdk:"repository"`
+}
+
+type projectRepositoryResourceModel struct {
+	AuthToken  types.String `tfsdk:"auth_token"`
+	AuthUser   types.String `tfsdk:"auth_user"`
+	MainRef    types.String `tfsdk:"main_ref"`
+	ReleaseRef types.String `tfsdk:"release_ref"`
+	Url        types.String `tfsdk:"url"`
+}

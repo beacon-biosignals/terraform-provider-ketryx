@@ -7,13 +7,14 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	_ "github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"terraform-provider-ketryx/pkg/ketryx"
 )
 
-// Ensure provider defined types fully satisfy interfaces
+// Ensure defined types fully satisfy interfaces
 var (
 	_ datasource.DataSource              = &projectDataSource{}
 	_ datasource.DataSource              = &projectsDataSource{}
@@ -36,12 +37,17 @@ func NewProjectDataSource() datasource.DataSource {
 }
 
 func (p *projectDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	var (
+		client *ketryx.Client
+		ok     bool
+	)
+
 	// Prevent panic if the provider has not been configured
 	if req.ProviderData == nil {
 		return
 	}
 
-	client, ok := req.ProviderData.(*ketryx.Client)
+	client, ok = req.ProviderData.(*ketryx.Client)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
@@ -79,12 +85,17 @@ func NewProjectsDataSource() datasource.DataSource {
 }
 
 func (p *projectsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	var (
+		client *ketryx.Client
+		ok     bool
+	)
+
 	// Prevent panic if the provider has not been configured
 	if req.ProviderData == nil {
 		return
 	}
 
-	client, ok := req.ProviderData.(*ketryx.Client)
+	client, ok = req.ProviderData.(*ketryx.Client)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
@@ -121,9 +132,14 @@ func (d *projectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 }
 
 func (p *projectsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state projectsDataSourceModel
+	var (
+		diags    diag.Diagnostics
+		err      error
+		projects ketryx.KetryxAPIProjectsGetResponse
+		state    projectsDataSourceModel
+	)
 
-	projects, err := p.client.ProjectsGet(ctx)
+	projects, err = p.client.ProjectsGet(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to read Ketryx Project API",
@@ -132,15 +148,13 @@ func (p *projectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	for _, project := range projects.Projects {
-		projectState := projectModel{
+		state.Projects = append(state.Projects, projectModel{
 			Id:   types.StringValue(project.Id),
 			Name: types.StringValue(project.Name),
-		}
-
-		state.Projects = append(state.Projects, projectState)
+		})
 	}
 
-	diags := resp.State.Set(ctx, &state)
+	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

@@ -16,4 +16,5 @@ tasks:
   example:
     cmds:
       - terraform plan
+      - terraform apply
     dir: examples/provider

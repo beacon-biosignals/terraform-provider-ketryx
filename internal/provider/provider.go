@@ -128,5 +128,7 @@ func (k *ketryxProvider) DataSources(_ context.Context) []func() datasource.Data
 
 // Defines `resource` blocks implemented by the provider
 func (k *ketryxProvider) Resources(_ context.Context) []func() resource.Resource {
-	return nil
+	return []func() resource.Resource{
+		NewProjectResource,
+	}
 }

@@ -13,13 +13,20 @@ tasks:
       - '**/*.go'
     watch: true
 
-  example:
+  example-apply:
     cmds:
       - terraform plan
       - terraform apply
     dir: examples/provider
 
-  example-cleanup:
+  example-destroy:
     cmds:
       - terraform destroy
+    dir: examples/provider
+
+  example-import:
+    cmds:
+      - terraform state rm ketryx_project.test
+      - terraform import ketryx_project.test KXPRJ01KWC7PQHBEXZSZAY0HN5TMAQT
+      - terraform plan
     dir: examples/provider

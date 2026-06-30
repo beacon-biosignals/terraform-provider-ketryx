@@ -29,7 +29,17 @@ type KetryxAPIRepository struct {
 	Url        string `json:"url"`
 }
 
-type KetryxAPIProjectsDeleteResponse struct {
+type KetryxAPIProjectDeleteResponse struct {
+	Id string `json:"id"`
+}
+
+type KetryxAPIProjectGetResponse struct {
+	Id           string                `json:"id"`
+	Name         string                `json:"name"`
+	Repositories []KetryxAPIRepository `json:"repository"`
+}
+
+type KetryxAPIProjectPostResponse struct {
 	Id string `json:"id"`
 }
 
@@ -39,6 +49,11 @@ type KetryxAPIProjectsGetResponse struct {
 
 type KetryxAPIProjectsPostResponse struct {
 	Id string `json:"id"`
+}
+
+type KetryxAPIProjectPostRequest struct {
+	Repositories []KetryxAPIRepository `json:"repository"`
+	Settings     string                `json:"settings"`
 }
 
 type KetryxAPIProjectsPostRequest struct {
@@ -52,15 +67,18 @@ type KetryxAPIProjectsPostRequest struct {
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Ketryx client
 type Client struct {
 	bearer string
 	url    string
 }
 
+// Creates a new Ketryx client
 func NewClient(api_key string) (*Client, error) {
 	return &Client{bearer: api_key, url: KETRYX_API_URL}, nil
 }
 
+// Workhorse function for requests against Ketryx
 func (c *Client) do(
 	ctx context.Context,
 	path, method string,
@@ -142,9 +160,10 @@ func (c *Client) do(
 	return nil
 }
 
-func (c *Client) ProjectDelete(ctx context.Context, projectId string) (KetryxAPIProjectsDeleteResponse, error) {
+// Deletes a Ketryx project
+func (c *Client) ProjectDelete(ctx context.Context, projectId string) (KetryxAPIProjectDeleteResponse, error) {
 	var (
-		resp KetryxAPIProjectsDeleteResponse
+		resp KetryxAPIProjectDeleteResponse
 		err  error
 	)
 
@@ -156,16 +175,54 @@ func (c *Client) ProjectDelete(ctx context.Context, projectId string) (KetryxAPI
 	return resp, err
 }
 
+// Retrieves a Ketryx project
+func (c *Client) ProjectGet(ctx context.Context, projectId string) (KetryxAPIProjectGetResponse, error) {
+	var (
+		resp KetryxAPIProjectGetResponse
+		err  error
+	)
+
+	tflog.Debug(ctx, "Retrieving Ketryx Project", map[string]any{
+		"ketryx_project_id": projectId,
+	})
+
+	err = c.do(ctx, fmt.Sprintf("api/v1/projects/%s", projectId), http.MethodGet, http.StatusOK, &resp, nil)
+	return resp, err
+}
+
+// Updates a Ketryx project
+func (c *Client) ProjectPost(
+	ctx context.Context,
+	req KetryxAPIProjectPostRequest,
+	projectId string,
+) (KetryxAPIProjectPostResponse, error) {
+	var (
+		resp KetryxAPIProjectPostResponse
+		err  error
+	)
+
+	tflog.Debug(ctx, "Updating Ketryx Project", map[string]any{
+		"ketryx_project_id": projectId,
+	})
+
+	err = c.do(ctx, fmt.Sprintf("api/v1/project/%s", projectId), http.MethodPost, http.StatusOK, &resp, req)
+	return resp, err
+}
+
+// Lists Ketryx projects
 func (c *Client) ProjectsGet(ctx context.Context) (KetryxAPIProjectsGetResponse, error) {
 	var (
 		resp KetryxAPIProjectsGetResponse
 		err  error
 	)
 
+	tflog.Debug(ctx, "Retrieving Ketryx Projects")
+
 	err = c.do(ctx, "api/v1/projects", http.MethodGet, http.StatusOK, &resp, nil)
 	return resp, err
 }
 
+// Creates a Ketryx project
 func (c *Client) ProjectsPost(ctx context.Context, req KetryxAPIProjectsPostRequest) (KetryxAPIProjectsPostResponse, error) {
 	var (
 		resp KetryxAPIProjectsPostResponse

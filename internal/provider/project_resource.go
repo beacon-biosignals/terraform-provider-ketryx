@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -14,8 +15,9 @@ import (
 
 // Ensure defined types fully satisfy interfaces
 var (
-	_ resource.Resource              = &projectResource{}
-	_ resource.ResourceWithConfigure = &projectResource{}
+	_ resource.Resource                = &projectResource{}
+	_ resource.ResourceWithConfigure   = &projectResource{}
+	_ resource.ResourceWithImportState = &projectResource{}
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -129,11 +131,55 @@ func (p *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 }
 
+func (p *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
 func (p *projectResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_project"
 }
 
 func (p *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var (
+		diags    diag.Diagnostics
+		err      error
+		response ketryx.KetryxAPIProjectGetResponse
+		state    projectResourceModel
+	)
+
+	// Retrieve current state
+	diags = resp.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Retrieve the project
+	response, err = p.client.ProjectGet(ctx, state.Id.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error retrieving project",
+			"Could not get project, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	// Update state
+	state.Name = types.StringValue(response.Name)
+	for _, repository := range response.Repositories {
+		state.Repository = append(state.Repository, projectRepositoryResourceModel{
+			AuthToken:  types.StringValue(repository.AuthToken),
+			AuthUser:   types.StringValue(repository.AuthUser),
+			MainRef:    types.StringValue(repository.MainRef),
+			ReleaseRef: types.StringValue(repository.ReleaseRef),
+			Url:        types.StringValue(repository.Url),
+		})
+	}
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (p *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -170,6 +216,56 @@ func (p *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 }
 
 func (p *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var (
+		diags   diag.Diagnostics
+		err     error
+		plan    projectResourceModel
+		request ketryx.KetryxAPIProjectPostRequest
+		state   projectResourceModel
+	)
+
+	// Retrieve current state
+	diags = resp.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Retrieve the plan
+	diags = req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Prepare the request
+	// request.Settings = plan.Settings.ValueString() // TODO Figure out settings field
+	for _, repository := range plan.Repository {
+		request.Repositories = append(request.Repositories, ketryx.KetryxAPIRepository{
+			AuthToken:  repository.AuthToken.ValueString(),
+			AuthUser:   repository.AuthUser.ValueString(),
+			MainRef:    repository.MainRef.ValueString(),
+			ReleaseRef: repository.ReleaseRef.ValueString(),
+			Url:        repository.Url.ValueString(),
+		})
+	}
+
+	// Update the project
+	_, err = p.client.ProjectPost(ctx, request, state.Id.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating project",
+			"Could not update project, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	// Update state
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -182,6 +278,8 @@ type projectResourceModel struct {
 	Id         types.String                     `tfsdk:"id"`
 	Name       types.String                     `tfsdk:"name"`
 	Repository []projectRepositoryResourceModel `tfsdk:"repository"`
+	// TODO Figure out settings field
+	// Settings   types.String                     `tfsdk:"settings"`
 }
 
 type projectRepositoryResourceModel struct {

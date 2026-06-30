@@ -18,3 +18,8 @@ tasks:
       - terraform plan
       - terraform apply
     dir: examples/provider
+
+  example-cleanup:
+    cmds:
+      - terraform destroy
+    dir: examples/provider

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -26,6 +27,10 @@ type KetryxAPIRepository struct {
 	MainRef    string `json:"main-ref"`
 	ReleaseRef string `json:"release-ref"`
 	Url        string `json:"url"`
+}
+
+type KetryxAPIProjectsDeleteResponse struct {
+	Id string `json:"id"`
 }
 
 type KetryxAPIProjectsGetResponse struct {
@@ -56,7 +61,12 @@ func NewClient(api_key string) (*Client, error) {
 	return &Client{bearer: api_key, url: KETRYX_API_URL}, nil
 }
 
-func (c *Client) do(ctx context.Context, path, method string, response, request any) error {
+func (c *Client) do(
+	ctx context.Context,
+	path, method string,
+	expectedStatusCode int,
+	response, request any,
+) error {
 	var (
 		api_url  string
 		err      error
@@ -70,7 +80,7 @@ func (c *Client) do(ctx context.Context, path, method string, response, request 
 	api_url, err = url.JoinPath(c.url, path)
 	ctx = tflog.SetField(tflog.SetField(ctx, "url", api_url), "method", method)
 
-	tflog.Trace(ctx, "Executing Ketryx API request")
+	tflog.Debug(ctx, "Executing Ketryx API request")
 
 	// Construct the request
 	if request != nil {
@@ -104,7 +114,7 @@ func (c *Client) do(ctx context.Context, path, method string, response, request 
 		})
 		return err
 	}
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != expectedStatusCode {
 		tflog.Error(ctx, "Error in Ketryx API request", map[string]any{
 			"request":  fmt.Sprintf("%v", req),
 			"response": fmt.Sprintf("%v", resp),
@@ -113,39 +123,58 @@ func (c *Client) do(ctx context.Context, path, method string, response, request 
 	}
 	defer resp.Body.Close()
 
-	tflog.Trace(ctx, "Recieved Ketryx API response", map[string]any{
+	tflog.Debug(ctx, "Recieved Ketryx API response", map[string]any{
 		"request":  fmt.Sprintf("%v", req),
 		"response": fmt.Sprintf("%v", resp),
 	})
 
-	// Decode into the response
-	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		tflog.Debug(ctx, "Could not decode Ketryx API response", map[string]any{
-			"request":  fmt.Sprintf("%v", req),
-			"response": fmt.Sprintf("%v", resp),
-		})
-		return err
+	// Decode the response, if one exists
+	if strings.Contains(resp.Header.Get("Content-Type"), "application/json") {
+		if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			tflog.Debug(ctx, "Could not decode Ketryx API response", map[string]any{
+				"request":  fmt.Sprintf("%v", req),
+				"response": fmt.Sprintf("%v", resp),
+			})
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (c *Client) ProjectsGet(ctx context.Context) (KetryxAPIProjectsGetResponse, error) {
+func (c *Client) ProjectDelete(ctx context.Context, projectId string) (KetryxAPIProjectsDeleteResponse, error) {
 	var (
-		projects KetryxAPIProjectsGetResponse
-		err      error
+		resp KetryxAPIProjectsDeleteResponse
+		err  error
 	)
 
-	err = c.do(ctx, "api/v1/projects", http.MethodGet, &projects, nil)
-	return projects, err
+	tflog.Debug(ctx, "Deleting Ketryx Project", map[string]any{
+		"ketryx_project_id": projectId,
+	})
+
+	err = c.do(ctx, fmt.Sprintf("api/v1/projects/%s", projectId), http.MethodDelete, http.StatusNoContent, &resp, nil)
+	return resp, err
+}
+
+func (c *Client) ProjectsGet(ctx context.Context) (KetryxAPIProjectsGetResponse, error) {
+	var (
+		resp KetryxAPIProjectsGetResponse
+		err  error
+	)
+
+	err = c.do(ctx, "api/v1/projects", http.MethodGet, http.StatusOK, &resp, nil)
+	return resp, err
 }
 
 func (c *Client) ProjectsPost(ctx context.Context, req KetryxAPIProjectsPostRequest) (KetryxAPIProjectsPostResponse, error) {
 	var (
-		project_id KetryxAPIProjectsPostResponse
-		err        error
+		resp KetryxAPIProjectsPostResponse
+		err  error
 	)
 
-	err = c.do(ctx, "api/v1/projects", http.MethodPost, &project_id, req)
-	return project_id, err
+	tflog.Debug(ctx, "Creating Ketryx Project")
+
+	// XXX The Ketryx API returns 200 OK for project creation, not 201 CREATED
+	err = c.do(ctx, "api/v1/projects", http.MethodPost, http.StatusOK, &resp, req)
+	return resp, err
 }

@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -60,11 +59,11 @@ func (p *projectResource) Configure(_ context.Context, req resource.ConfigureReq
 
 func (p *projectResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var (
-		diags      diag.Diagnostics
-		err        error
-		plan       projectResourceModel
-		project_id ketryx.KetryxAPIProjectsPostResponse
-		request    ketryx.KetryxAPIProjectsPostRequest
+		diags    diag.Diagnostics
+		err      error
+		plan     projectResourceModel
+		response ketryx.KetryxAPIProjectsPostResponse
+		request  ketryx.KetryxAPIProjectsPostRequest
 	)
 
 	// Retrieve the plan
@@ -75,19 +74,19 @@ func (p *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Prepare the request
-	request.Name = plan.Name.String()
+	request.Name = plan.Name.ValueString()
 	for _, repository := range plan.Repository {
 		request.Repositories = append(request.Repositories, ketryx.KetryxAPIRepository{
-			AuthToken:  repository.AuthToken.String(),
-			AuthUser:   repository.AuthUser.String(),
-			MainRef:    repository.MainRef.String(),
-			ReleaseRef: repository.ReleaseRef.String(),
-			Url:        repository.Url.String(),
+			AuthToken:  repository.AuthToken.ValueString(),
+			AuthUser:   repository.AuthUser.ValueString(),
+			MainRef:    repository.MainRef.ValueString(),
+			ReleaseRef: repository.ReleaseRef.ValueString(),
+			Url:        repository.Url.ValueString(),
 		})
 	}
 
 	// Create the project
-	project_id, err = p.client.ProjectsPost(ctx, request)
+	response, err = p.client.ProjectsPost(ctx, request)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating project",
@@ -97,8 +96,7 @@ func (p *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Update state
-	plan.Id = types.StringValue(project_id.Id)
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+	plan.Id = types.StringValue(response.Id)
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -107,6 +105,28 @@ func (p *projectResource) Create(ctx context.Context, req resource.CreateRequest
 }
 
 func (p *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var (
+		diags diag.Diagnostics
+		err   error
+		state projectResourceModel
+	)
+
+	// Retrieve current state
+	diags = resp.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Delete the project
+	_, err = p.client.ProjectDelete(ctx, state.Id.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting project",
+			"Could not delete project, unexpected error: "+err.Error(),
+		)
+		return
+	}
 }
 
 func (p *projectResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -145,9 +165,6 @@ func (p *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					},
 				},
 			},
-			"last_updated": schema.StringAttribute{
-				Computed: true,
-			},
 		},
 	}
 }
@@ -162,10 +179,9 @@ func (p *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type projectResourceModel struct {
-	Id          types.String                     `tfsdk:"id"`
-	LastUpdated types.String                     `tfsdk:"last_updated"`
-	Name        types.String                     `tfsdk:"name"`
-	Repository  []projectRepositoryResourceModel `tfsdk:"repository"`
+	Id         types.String                     `tfsdk:"id"`
+	Name       types.String                     `tfsdk:"name"`
+	Repository []projectRepositoryResourceModel `tfsdk:"repository"`
 }
 
 type projectRepositoryResourceModel struct {

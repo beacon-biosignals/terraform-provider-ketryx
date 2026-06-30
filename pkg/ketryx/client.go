@@ -112,7 +112,7 @@ func (c *Client) do(
 		req, err = http.NewRequest(method, api_url, nil)
 	}
 	if err != nil {
-		// There was in error in constructing the request
+		// There was an error in constructing the request
 		tflog.Error(ctx, "Error executing Ketryx API request", map[string]any{
 			"request":  fmt.Sprintf("%v", req),
 			"response": nil,
@@ -141,7 +141,7 @@ func (c *Client) do(
 	}
 	defer resp.Body.Close()
 
-	tflog.Debug(ctx, "Recieved Ketryx API response", map[string]any{
+	tflog.Debug(ctx, "Received Ketryx API response", map[string]any{
 		"request":  fmt.Sprintf("%v", req),
 		"response": fmt.Sprintf("%v", resp),
 	})

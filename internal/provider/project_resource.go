@@ -26,12 +26,10 @@ var (
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// projectResource is the resource implementation.
 type projectResource struct {
 	client *ketryx.Client
 }
 
-// NewOrderResource is a helper function to simplify the provider implementation.
 func NewProjectResource() resource.Resource {
 	return &projectResource{}
 }
@@ -50,7 +48,7 @@ func (p *projectResource) Configure(_ context.Context, req resource.ConfigureReq
 	client, ok = req.ProviderData.(*ketryx.Client)
 	if !ok {
 		resp.Diagnostics.AddError(
-			"Unexpected Data Soure Configure Type",
+			"Unexpected Data Source Configure Type",
 			fmt.Sprintf("Expected *ketryx.Client, got: %T. Please report this issue to the provider developer", req.ProviderData),
 		)
 		return

@@ -34,14 +34,8 @@ This is a [Terraform Plugin Framework](https://github.com/hashicorp/terraform-pl
 **Provider registration** (`provider.go`): `ketryxProvider` reads `api_key` from config or `KETRYX_API_KEY` env var, constructs a `ketryx.Client`, and passes it to resources/data sources via `Configure()`.
 
 **Current resources and data sources:**
-- `ketryx_project` resource — Create/Delete implemented; Read and Update are stubs
+- `ketryx_project` resource — Create/Delete/ImportState implemented; Read and Update are stubs
 - `ketryx_project` data source — stub (not implemented)
 - `ketryx_projects` data source — lists all projects
 
 **Naming convention:** A resource/data source named `ketryx_foo` lives in `internal/provider/foo_resource.go` or `foo_data_source.go`, with corresponding API methods in `pkg/ketryx/client.go`.
-
-## Known Issues
-
-- `project_resource.go:154`: `auth_user` is declared as `Float64Attribute` but should be `StringAttribute`
-- `client.go` `ProjectsGet()`: hits `/api/v1/projects/test` (hardcoded test path) instead of `/api/v1/projects`
-- `project_resource.go`: `repository` schema uses `SingleNestedAttribute` but the model struct uses a slice (`[]projectRepositoryResourceModel`)

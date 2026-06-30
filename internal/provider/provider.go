@@ -83,7 +83,7 @@ func (k *ketryxProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_key"),
 			"Unknown Ketryx API key",
-			"Unknown Ketryx API key (longer description)",
+			"Unknown Ketryx API key",
 		)
 	}
 	if resp.Diagnostics.HasError() {
@@ -99,7 +99,7 @@ func (k *ketryxProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_key"),
 			"Empty Ketryx API key",
-			"Empty Ketryx API key (longer description)",
+			"Empty Ketryx API key",
 		)
 	}
 	if resp.Diagnostics.HasError() {

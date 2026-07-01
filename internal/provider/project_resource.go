@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"terraform-provider-ketryx/pkg/ketryx"
@@ -164,14 +166,27 @@ func (p *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	// Update state
 	state.Name = types.StringValue(response.Name)
+
+	// auth_token and auth_user are write-only: the API reports only hasAuth on
+	// reads, never the secret values, so carry them over from prior state
+	// (keyed by repository URL) instead of clobbering them with empty strings
+	priorRepositories := make(map[string]projectRepositoryResourceModel, len(state.Repository))
+	for _, repository := range state.Repository {
+		priorRepositories[repository.Url.ValueString()] = repository
+	}
+
+	state.Repository = nil
 	for _, repository := range response.Repositories {
-		state.Repository = append(state.Repository, projectRepositoryResourceModel{
-			AuthToken:  types.StringValue(repository.AuthToken),
-			AuthUser:   types.StringValue(repository.AuthUser),
+		entry := projectRepositoryResourceModel{
 			MainRef:    types.StringValue(repository.MainRef),
 			ReleaseRef: types.StringValue(repository.ReleaseRef),
 			Url:        types.StringValue(repository.Url),
-		})
+		}
+		if prior, ok := priorRepositories[repository.Url]; ok {
+			entry.AuthToken = prior.AuthToken
+			entry.AuthUser = prior.AuthUser
+		}
+		state.Repository = append(state.Repository, entry)
 	}
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -185,6 +200,9 @@ func (p *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required: true,
@@ -240,6 +258,7 @@ func (p *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	// Prepare the request
+	request.Name = plan.Name.ValueString()
 	// request.Settings = plan.Settings.ValueString() // TODO Figure out settings field
 	for _, repository := range plan.Repository {
 		request.Repositories = append(request.Repositories, ketryx.KetryxAPIRepository{

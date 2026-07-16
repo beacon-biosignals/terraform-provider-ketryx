@@ -87,6 +87,15 @@ func NewClient(api_key string) (*Client, error) {
 	return &Client{bearer: api_key, url: KETRYX_API_URL}, nil
 }
 
+// Clones header with sensitive values masked so it is safe to log
+func redactedHeader(header http.Header) http.Header {
+	redacted := header.Clone()
+	if redacted.Get("Authorization") != "" {
+		redacted.Set("Authorization", "REDACTED")
+	}
+	return redacted
+}
+
 // Workhorse function for requests against Ketryx
 func (c *Client) do(
 	ctx context.Context,
@@ -117,15 +126,12 @@ func (c *Client) do(
 			req, err = http.NewRequest(method, api_url, bytes.NewBuffer(req_body))
 		}
 	} else {
-		// This request do not have a request body
+		// This request does not have a request body
 		req, err = http.NewRequest(method, api_url, nil)
 	}
 	if err != nil {
 		// There was an error in constructing the request
-		tflog.Error(ctx, "Error executing Ketryx API request", map[string]any{
-			"request":  fmt.Sprintf("%v", req),
-			"response": nil,
-		})
+		tflog.Error(ctx, "Error constructing Ketryx API request")
 		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.bearer)
@@ -136,8 +142,7 @@ func (c *Client) do(
 	if err != nil {
 		// There was an error in making the request
 		tflog.Error(ctx, "Error in Ketryx API request", map[string]any{
-			"request":  fmt.Sprintf("%v", req),
-			"response": fmt.Sprintf("%v", resp),
+			"request_headers": redactedHeader(req.Header),
 		})
 		return err
 	}
@@ -146,23 +151,26 @@ func (c *Client) do(
 	if resp.StatusCode != expectedStatusCode {
 		body, _ := io.ReadAll(resp.Body)
 		tflog.Error(ctx, "Error in Ketryx API request", map[string]any{
-			"request":  fmt.Sprintf("%v", req),
-			"response": fmt.Sprintf("%v", resp),
+			"status":           resp.Status,
+			"request_headers":  redactedHeader(req.Header),
+			"response_headers": resp.Header,
 		})
 		return fmt.Errorf("Error in Ketryx API response: %s: %s", resp.Status, strings.TrimSpace(string(body)))
 	}
 
 	tflog.Debug(ctx, "Received Ketryx API response", map[string]any{
-		"request":  fmt.Sprintf("%v", req),
-		"response": fmt.Sprintf("%v", resp),
+		"status":           resp.Status,
+		"request_headers":  redactedHeader(req.Header),
+		"response_headers": resp.Header,
 	})
 
 	// Decode the response, if one exists
 	if strings.Contains(resp.Header.Get("Content-Type"), "application/json") {
 		if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
 			tflog.Debug(ctx, "Could not decode Ketryx API response", map[string]any{
-				"request":  fmt.Sprintf("%v", req),
-				"response": fmt.Sprintf("%v", resp),
+				"status":           resp.Status,
+				"request_headers":  redactedHeader(req.Header),
+				"response_headers": resp.Header,
 			})
 			return err
 		}

@@ -189,23 +189,26 @@ func (p *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"name": schema.StringAttribute{
 				Required: true,
 			},
-			"repository": schema.SingleNestedAttribute{
+			"repository": schema.ListNestedAttribute{
 				Optional: true,
-				Attributes: map[string]schema.Attribute{
-					"auth_token": schema.StringAttribute{
-						Required: true,
-					},
-					"auth_user": schema.Float64Attribute{
-						Required: true,
-					},
-					"main_ref": schema.StringAttribute{
-						Required: true,
-					},
-					"release_ref": schema.StringAttribute{
-						Required: true,
-					},
-					"url": schema.StringAttribute{
-						Required: true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"auth_token": schema.StringAttribute{
+							Required:  true,
+							Sensitive: true,
+						},
+						"auth_user": schema.StringAttribute{
+							Required: true,
+						},
+						"main_ref": schema.StringAttribute{
+							Required: true,
+						},
+						"release_ref": schema.StringAttribute{
+							Required: true,
+						},
+						"url": schema.StringAttribute{
+							Required: true,
+						},
 					},
 				},
 			},

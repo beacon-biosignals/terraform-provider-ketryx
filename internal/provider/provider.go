@@ -112,6 +112,7 @@ func (k *ketryxProvider) Configure(ctx context.Context, req provider.ConfigureRe
 			"Ketryx API client error",
 			"Ketryx API client error: "+err.Error(),
 		)
+		return
 	}
 
 	resp.DataSourceData = client

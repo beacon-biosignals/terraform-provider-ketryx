@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -22,10 +23,10 @@ type KetryxAPIProject struct {
 }
 
 type KetryxAPIRepository struct {
-	AuthToken  string `json:"auth-token"`
-	AuthUser   string `json:"auth-user"`
-	MainRef    string `json:"main-ref"`
-	ReleaseRef string `json:"release-ref"`
+	AuthToken  string `json:"authToken"`
+	AuthUser   string `json:"authUser"`
+	MainRef    string `json:"mainRef"`
+	ReleaseRef string `json:"releaseRef"`
 	Url        string `json:"url"`
 }
 
@@ -33,10 +34,17 @@ type KetryxAPIProjectDeleteResponse struct {
 	Id string `json:"id"`
 }
 
+type KetryxAPIRepositoryResponse struct {
+	Url        string `json:"url"`
+	MainRef    string `json:"mainRef"`
+	ReleaseRef string `json:"releaseRef"`
+	HasAuth    bool   `json:"hasAuth"`
+}
+
 type KetryxAPIProjectGetResponse struct {
-	Id           string                `json:"id"`
-	Name         string                `json:"name"`
-	Repositories []KetryxAPIRepository `json:"repository"`
+	Id           string                        `json:"id"`
+	Name         string                        `json:"name"`
+	Repositories []KetryxAPIRepositoryResponse `json:"repositories"`
 }
 
 type KetryxAPIProjectPostResponse struct {
@@ -52,13 +60,14 @@ type KetryxAPIProjectsPostResponse struct {
 }
 
 type KetryxAPIProjectPostRequest struct {
-	Repositories []KetryxAPIRepository `json:"repository"`
-	Settings     string                `json:"settings"`
+	Name         string                `json:"name"`
+	Repositories []KetryxAPIRepository `json:"repositories"`
+	Settings     map[string]any        `json:"settings,omitempty"`
 }
 
 type KetryxAPIProjectsPostRequest struct {
 	Name         string                `json:"name"`
-	Repositories []KetryxAPIRepository `json:"repository"`
+	Repositories []KetryxAPIRepository `json:"repositories"`
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -132,14 +141,16 @@ func (c *Client) do(
 		})
 		return err
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != expectedStatusCode {
+		body, _ := io.ReadAll(resp.Body)
 		tflog.Error(ctx, "Error in Ketryx API request", map[string]any{
 			"request":  fmt.Sprintf("%v", req),
 			"response": fmt.Sprintf("%v", resp),
 		})
-		return fmt.Errorf("Error in Ketryx API response: %s", resp.Status)
+		return fmt.Errorf("Error in Ketryx API response: %s: %s", resp.Status, strings.TrimSpace(string(body)))
 	}
-	defer resp.Body.Close()
 
 	tflog.Debug(ctx, "Received Ketryx API response", map[string]any{
 		"request":  fmt.Sprintf("%v", req),
@@ -205,7 +216,7 @@ func (c *Client) ProjectPost(
 		"ketryx_project_id": projectId,
 	})
 
-	err = c.do(ctx, fmt.Sprintf("api/v1/project/%s", projectId), http.MethodPost, http.StatusOK, &resp, req)
+	err = c.do(ctx, fmt.Sprintf("api/v1/projects/%s", projectId), http.MethodPost, http.StatusOK, &resp, req)
 	return resp, err
 }
 

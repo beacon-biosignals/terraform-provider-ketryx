@@ -145,6 +145,7 @@ func (p *projectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 			"Unable to read Ketryx Project API",
 			err.Error(),
 		)
+		return
 	}
 
 	for _, project := range projects.Projects {

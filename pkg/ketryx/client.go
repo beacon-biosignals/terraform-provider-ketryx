@@ -83,8 +83,8 @@ type Client struct {
 }
 
 // Creates a new Ketryx client
-func NewClient(api_key string) (*Client, error) {
-	return &Client{bearer: api_key, url: KETRYX_API_URL}, nil
+func NewClient(apiKey string) (*Client, error) {
+	return &Client{bearer: apiKey, url: KETRYX_API_URL}, nil
 }
 
 // Clones header with sensitive values masked so it is safe to log
@@ -104,30 +104,34 @@ func (c *Client) do(
 	response, request any,
 ) error {
 	var (
-		api_url  string
-		err      error
-		req      *http.Request
-		req_body []byte
-		resp     *http.Response
+		apiURL  string
+		err     error
+		req     *http.Request
+		reqBody []byte
+		resp    *http.Response
 
 		client *http.Client = &http.Client{}
 	)
 
-	api_url, err = url.JoinPath(c.url, path)
-	ctx = tflog.SetField(tflog.SetField(ctx, "url", api_url), "method", method)
+	apiURL, err = url.JoinPath(c.url, path)
+	if err != nil {
+		tflog.Error(ctx, "Error constructing Ketryx API URL")
+		return err
+	}
+	ctx = tflog.SetField(tflog.SetField(ctx, "url", apiURL), "method", method)
 
 	tflog.Debug(ctx, "Executing Ketryx API request")
 
 	// Construct the request
 	if request != nil {
 		// This request has a request body
-		req_body, err = json.Marshal(request)
+		reqBody, err = json.Marshal(request)
 		if err == nil {
-			req, err = http.NewRequest(method, api_url, bytes.NewBuffer(req_body))
+			req, err = http.NewRequest(method, apiURL, bytes.NewBuffer(reqBody))
 		}
 	} else {
 		// This request does not have a request body
-		req, err = http.NewRequest(method, api_url, nil)
+		req, err = http.NewRequest(method, apiURL, nil)
 	}
 	if err != nil {
 		// There was an error in constructing the request

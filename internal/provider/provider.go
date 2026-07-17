@@ -68,10 +68,10 @@ func (k *ketryxProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 // Prepares a Ketryx API client
 func (k *ketryxProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var (
-		api_key string
-		client  *ketryx.Client
-		config  ketryxProviderModel
-		err     error
+		apiKey string
+		client *ketryx.Client
+		config ketryxProviderModel
+		err    error
 	)
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
@@ -90,12 +90,12 @@ func (k *ketryxProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		return
 	}
 
-	api_key = os.Getenv("KETRYX_API_KEY")
+	apiKey = os.Getenv("KETRYX_API_KEY")
 	if !config.APIKey.IsNull() {
-		api_key = config.APIKey.ValueString()
+		apiKey = config.APIKey.ValueString()
 	}
 
-	if api_key == "" {
+	if apiKey == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_key"),
 			"Empty Ketryx API key",
@@ -106,7 +106,7 @@ func (k *ketryxProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		return
 	}
 
-	client, err = ketryx.NewClient(api_key)
+	client, err = ketryx.NewClient(apiKey)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Ketryx API client error",

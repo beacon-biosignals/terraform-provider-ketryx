@@ -3,13 +3,11 @@ package provider
 import (
 	"context"
 	"fmt"
-	_ "net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	_ "github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"terraform-provider-ketryx/pkg/ketryx"
 )

@@ -1,0 +1,33 @@
+version: '3'
+
+dotenv:
+  - .env
+
+interval: 500ms
+
+tasks:
+  build:
+    cmds:
+      - go install
+    sources:
+      - '**/*.go'
+    watch: true
+
+  example-apply:
+    cmds:
+      - terraform plan
+      - terraform apply
+    dir: examples/provider
+
+  example-destroy:
+    cmds:
+      - terraform destroy
+    dir: examples/provider
+
+  example-import:
+    cmds:
+      - ketryx_project_id=$(terraform state show ketryx_project.test | grep id | awk '{print $3}' | tr -d '"')
+      - terraform state rm ketryx_project.test
+      - terraform import ketryx_project.test $ketryx_project_id
+      - terraform plan
+    dir: examples/provider

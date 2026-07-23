@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Task runner is used for automation (requires [Task](https://taskfile.dev)):
 
 ```bash
-task build        # go install with file watching (watches **/*.go, 500ms interval)
+task watch        # go install with file watching (watches **/*.go, 500ms interval)
 task example      # terraform plan && terraform apply in examples/provider/
 task example-cleanup  # terraform destroy in examples/provider/
 ```

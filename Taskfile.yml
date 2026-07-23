@@ -8,6 +8,10 @@ interval: 500ms
 tasks:
   build:
     cmds:
+      - go build -v ./...
+
+  watch:
+    cmds:
       - go install
     sources:
       - '**/*.go'
@@ -31,3 +35,36 @@ tasks:
       - terraform import ketryx_project.test $ketryx_project_id
       - terraform plan
     dir: examples/provider
+
+  deps:
+    cmds:
+      - go mod verify
+      - go mod tidy
+
+  test:
+    cmds:
+      - go test ./...
+
+  format:
+    cmds:
+      - go fmt ./...
+
+  vet:
+    cmds:
+      - go vet ./...
+
+  race:
+    cmds:
+      - go test -race -v ./...
+
+  check:
+    cmds:
+      - task: build
+      - task: deps
+      - task: vet
+      - task: test
+      - task: race
+
+  clean:
+    cmds:
+      - rm -rf dist

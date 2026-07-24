@@ -34,7 +34,7 @@ project root.
 Task may be used to test code under `examples/provider`.
 
 ```
-task build          # Will start a watch loop to build the provider
+task watch          # Will start a watch loop to build the provider
 
 task example-apply  # Executes `terraform apply`
 ```

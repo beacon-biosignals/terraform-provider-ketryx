@@ -1,3 +1,5 @@
 *.tfstate*
 .env
 .task
+# Added by goreleaser init:
+dist/

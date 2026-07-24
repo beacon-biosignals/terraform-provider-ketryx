@@ -15,11 +15,11 @@ func TestProjectResourceSchema(t *testing.T) {
 
 	NewProjectResource().Schema(ctx, fwresource.SchemaRequest{}, resp)
 	if resp.Diagnostics.HasError() {
-		t.Fatalf("schema method diagnostics: %+v", resp.Diagnostics)
+		t.Fatalf("schema has diagnostics when registering: %+v", resp.Diagnostics)
 	}
 
 	if diags := resp.Schema.ValidateImplementation(ctx); diags.HasError() {
-		t.Fatalf("schema validation diagnostics: %+v", diags)
+		t.Fatalf("schema could not be validated: %+v", diags)
 	}
 }
 

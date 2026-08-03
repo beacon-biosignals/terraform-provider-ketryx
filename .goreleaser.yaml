@@ -30,4 +30,4 @@ archives:
 
 changelog:
   # let release please handle changelogs
-  disabled: true
+  disable: true

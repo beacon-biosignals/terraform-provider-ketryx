@@ -40,3 +40,24 @@ task example-apply  # Executes `terraform apply`
 ```
 
 Run `task --list-all` for a full list.
+
+
+## Commits
+
+This project uses conventional commits to automatically generate a changelog and
+[semantic version numbers](http://semver.org/). Please make sure all commits to
+main adhere to the [spec](https://www.conventionalcommits.org/en/v1.0.0/#specification).
+
+## Releases
+
+A new release PR will be created automatically from releasable commits (eg:
+prefixed with `feat:` for a minor version bump or `fix:` for a patch bump) using
+[Release Please](https://github.com/googleapis/release-please). Once the PR is
+merged, a release will be created and [goreleaser](https://goreleaser.com/) will
+build the project for various platforms and add the assets to the release.
+
+## Atlantis
+
+This provider is built into our Atlantis image. If you release a new version,
+you should [bump the version](https://github.com/beacon-biosignals/infra/blob/main/beacon-images/atlantis/Dockerfile#L76)
+in the Atlantis dockerfile and rebuild the image.

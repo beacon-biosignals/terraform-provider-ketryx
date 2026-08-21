@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/beacon-biosignals/terraform-provider-ketryx/compare/v0.1.1...v0.1.2) (2026-08-21)
+
+
+### Bug Fixes
+
+* repository attributes are optional, not required ([#15](https://github.com/beacon-biosignals/terraform-provider-ketryx/issues/15)) ([fe094e1](https://github.com/beacon-biosignals/terraform-provider-ketryx/commit/fe094e166b5e3e2983d2cacf30d20377acdea696))
+
 ## [0.1.1](https://github.com/beacon-biosignals/terraform-provider-ketryx/compare/v0.1.0...v0.1.1) (2026-08-03)
 
 

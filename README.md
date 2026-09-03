@@ -17,7 +17,7 @@ build of this provider.
 ```
 provider_installation {
   dev_overrides {
-    "registry.terraform.io/beaconbio/ketryx" = "/path/to/go/bin"
+    "registry.terraform.io/beacon-biosignals/ketryx" = "/path/to/go/bin"
   }
 
   direct {}
@@ -55,9 +55,3 @@ prefixed with `feat:` for a minor version bump or `fix:` for a patch bump) using
 [Release Please](https://github.com/googleapis/release-please). Once the PR is
 merged, a release will be created and [goreleaser](https://goreleaser.com/) will
 build the project for various platforms and add the assets to the release.
-
-## Atlantis
-
-This provider is built into our Atlantis image. If you release a new version,
-you should [bump the version](https://github.com/beacon-biosignals/infra/blob/main/beacon-images/atlantis/Dockerfile#L76)
-in the Atlantis dockerfile and rebuild the image.

@@ -23,7 +23,7 @@ Environment variables are loaded from `.env` (create from `.env.example` if pres
 
 ## Architecture
 
-This is a [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework) provider for the Ketryx API, published at `registry.terraform.io/beaconbio/ketryx`.
+This is a [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework) provider for the Ketryx API, published at `registry.terraform.io/beacon-biosignals/ketryx`.
 
 **Two layers:**
 

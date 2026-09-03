@@ -20,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/beaconbio/ketryx",
+		Address: "registry.terraform.io/beacon-biosignals/ketryx",
 		Debug:   debug,
 	}
 

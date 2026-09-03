@@ -4,7 +4,7 @@
 terraform {
   required_providers {
     ketryx = {
-      source = "registry.terraform.io/beaconbio/ketryx"
+      source = "registry.terraform.io/beacon-biosignals/ketryx"
     }
   }
 }

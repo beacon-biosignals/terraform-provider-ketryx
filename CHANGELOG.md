@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/beacon-biosignals/terraform-provider-ketryx/compare/v0.1.2...v0.1.3) (2026-09-04)
+
+
+### Miscellaneous Chores
+
+* v0.1.3 release ([304c5ed](https://github.com/beacon-biosignals/terraform-provider-ketryx/commit/304c5ed235fb2b3aa288ba83848573e4b3b48379))
+
 ## [0.1.2](https://github.com/beacon-biosignals/terraform-provider-ketryx/compare/v0.1.1...v0.1.2) (2026-08-21)
 
 

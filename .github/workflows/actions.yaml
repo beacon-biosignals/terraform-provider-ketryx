@@ -1,6 +1,8 @@
 name: Actions analysis 🌈
 on:
   pull_request:
+  push:
+    branches: [ main ]
 jobs:
   zizmor:
     runs-on: ubuntu-latest
